@@ -2,8 +2,8 @@
 CREATE TABLE conversations (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   firm_id         UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
-  customer_id     UUID NOT NULL REFERENCES customers(id),
-  state           TEXT DEFAULT 'active'
+  customer_id     UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  state           TEXT NOT NULL DEFAULT 'active'
                   CHECK (state IN (
                     'active',            -- Normal konuşma
                     'awaiting_address',  -- Sipariş başladı, adres bekleniyor
@@ -23,7 +23,7 @@ CREATE TABLE messages (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   firm_id         UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
   conversation_id UUID NOT NULL REFERENCES conversations(id),
-  customer_id     UUID NOT NULL REFERENCES customers(id),
+  customer_id     UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
   direction       TEXT NOT NULL CHECK (direction IN ('inbound', 'outbound')),
   sender_type     TEXT NOT NULL CHECK (sender_type IN ('customer', 'ai', 'firm_owner')),
   content         TEXT NOT NULL,
@@ -39,13 +39,13 @@ CREATE TABLE messages (
 CREATE TABLE orders (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   firm_id              UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
-  customer_id          UUID NOT NULL REFERENCES customers(id),
+  customer_id          UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
   conversation_id      UUID REFERENCES conversations(id),
-  order_number         TEXT UNIQUE DEFAULT
+  order_number         TEXT DEFAULT
                        'ORD-' || UPPER(SUBSTRING(gen_random_uuid()::TEXT, 1, 8)),
   product_details      JSONB DEFAULT '{}',
   delivery_address     TEXT,
-  status               TEXT DEFAULT 'pending_payment'
+  status               TEXT DEFAULT 'draft'
                        CHECK (status IN (
                          'draft', 'pending_payment', 'payment_received',
                          'processing', 'shipped', 'delivered', 'cancelled'
