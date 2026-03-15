@@ -88,7 +88,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "=Bearer {{ $vars.OPENAI_API_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $env.OPENAI_API_KEY }}"},
             {"name": "Content-Type", "value": "application/json"}
           ]
         },
@@ -138,12 +138,12 @@
       "position": [1570, 180],
       "parameters": {
         "method": "PATCH",
-        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/conversations",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/conversations",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
             {"name": "Content-Type", "value": "application/json"}
           ]
         },
@@ -167,12 +167,12 @@
       "position": [1790, 180],
       "parameters": {
         "method": "POST",
-        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/orders",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/orders",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
             {"name": "Content-Type", "value": "application/json"},
             {"name": "Prefer", "value": "return=representation"}
           ]
@@ -212,12 +212,12 @@
       "position": [910, 420],
       "parameters": {
         "method": "GET",
-        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/orders",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/orders",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"}
           ]
         },
         "sendQuery": true,
@@ -250,12 +250,12 @@
       "position": [1350, 420],
       "parameters": {
         "method": "PATCH",
-        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/orders",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/orders",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
             {"name": "Content-Type", "value": "application/json"}
           ]
         },
@@ -301,12 +301,12 @@
       "position": [1790, 420],
       "parameters": {
         "method": "PATCH",
-        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/conversations",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/conversations",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
             {"name": "Content-Type", "value": "application/json"}
           ]
         },
