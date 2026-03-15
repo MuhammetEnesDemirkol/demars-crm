@@ -471,7 +471,7 @@
         "sendBody": true,
         "options": {},
         "contentType": "json",
-        "jsonBody": "={\n  \"conversation_id\": \"{{ $json.conversation_id }}\",\n  \"direction\": \"inbound\",\n  \"sender_type\": \"customer\",\n  \"message_type\": \"{{ $json.message_type }}\",\n  \"content\": \"{{ $json.message_text }}\",\n  \"wa_message_id\": \"{{ $json.wa_message_id }}\",\n  \"media_id\": {{ $json.media_id ? '\"' + $json.media_id + '\"' : 'null' }}\n}",
+        "jsonBody": "={\n  \"firm_id\": \"{{ $json.firm_id }}\",\n  \"conversation_id\": \"{{ $json.conversation_id }}\",\n  \"customer_id\": \"{{ $json.customer_id }}\",\n  \"direction\": \"inbound\",\n  \"sender_type\": \"customer\",\n  \"message_type\": \"{{ $json.message_type }}\",\n  \"content\": \"{{ $json.message_text }}\",\n  \"wa_message_id\": \"{{ $json.wa_message_id }}\"\n}",
         "specifyBody": "json"
       }
     },
@@ -959,7 +959,7 @@
         "sendBody": true,
         "options": {},
         "contentType": "json",
-        "jsonBody": "={\n  \"conversation_id\": \"{{ $('Extract AI Response').item.json.conversation_id }}\",\n  \"direction\": \"outbound\",\n  \"sender_type\": \"ai\",\n  \"message_type\": \"text\",\n  \"content\": {{ JSON.stringify($('Extract AI Response').item.json.ai_response_text) }}\n}",
+        "jsonBody": "={\n  \"firm_id\": \"{{ $('Extract AI Response').item.json.firm_id }}\",\n  \"conversation_id\": \"{{ $('Extract AI Response').item.json.conversation_id }}\",\n  \"customer_id\": \"{{ $('Extract AI Response').item.json.customer_id }}\",\n  \"direction\": \"outbound\",\n  \"sender_type\": \"ai\",\n  \"message_type\": \"text\",\n  \"content\": \"{{ $('Extract AI Response').item.json.ai_response_text.replace(/\"/g, '\\\\\\\\\"') }}\"\n}",
         "specifyBody": "json"
       }
     },
