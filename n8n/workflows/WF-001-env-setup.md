@@ -46,3 +46,11 @@ Supabase is also called via HTTP Request with `$vars.SUPABASE_SERVICE_KEY`. No n
 3. Set all variables above in n8n Settings → Variables
 4. Import and activate WF-001
 5. Register the WF-001 POST webhook URL in Meta Developer Console
+
+## Known Issues / Post-Import Adjustments
+
+1. **AI Model**: The "Generate AI Response" node uses gpt-4o. To save costs on simple queries, you can manually set it to gpt-4o-mini for testing.
+
+2. **Parallel branch fan-in**: If "Build AI Prompt" fails to receive data from Get Products/Get FAQs/Get History, change the three parallel HTTP nodes to be sequential (chain them one after another) in the n8n UI.
+
+3. **After importing**: Set all n8n Variables in Settings → Variables before activating.

@@ -695,7 +695,7 @@
         },
         "sendBody": true,
         "bodyContentType": "json",
-        "body": "={\n  \"model\": \"gpt-4o-mini\",\n  \"max_tokens\": 500,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{ JSON.stringify($json.system_prompt) }}},\n    ...{{ JSON.stringify($json.history_messages) }},\n    {\"role\": \"user\", \"content\": {{ JSON.stringify($json.message_text) }}}\n  ]\n}",
+        "body": "={\n  \"model\": \"gpt-4o\",\n  \"max_tokens\": 500,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{ JSON.stringify($json.system_prompt) }}},\n    ...{{ JSON.stringify($json.history_messages) }},\n    {\"role\": \"user\", \"content\": {{ JSON.stringify($json.message_text) }}}\n  ]\n}",
         "options": {}
       }
     },
