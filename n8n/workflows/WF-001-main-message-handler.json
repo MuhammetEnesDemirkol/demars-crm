@@ -1,0 +1,923 @@
+{
+  "name": "WF-001 Main Message Handler",
+  "nodes": [
+    {
+      "id": "n_get_webhook",
+      "name": "WhatsApp Webhook GET",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 120],
+      "webhookId": "wa-verify-handler",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_verify_challenge",
+      "name": "Return Challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [470, 120],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "n_post_webhook",
+      "name": "WhatsApp Webhook POST",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "wa-main-handler",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_respond_200",
+      "name": "Respond 200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [470, 180],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "n_extract",
+      "name": "Extract Message Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 420],
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body;\nconst entry = body?.entry?.[0];\nconst change = entry?.changes?.[0];\nconst value = change?.value;\n\nif (!value?.messages?.[0]) {\n  return [{ json: { skip: true } }];\n}\n\nconst message = value.messages[0];\nconst contact = value.contacts?.[0];\n\nreturn [{\n  json: {\n    phone_number_id: value.metadata.phone_number_id,\n    customer_phone: message.from,\n    customer_name: contact?.profile?.name || 'Müşteri',\n    wa_message_id: message.id,\n    message_type: message.type,\n    message_text: message.text?.body || '',\n    media_id: message.image?.id || message.document?.id || null,\n    timestamp: message.timestamp\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_has_message",
+      "name": "Has Valid Message?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 420],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEqual"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n_stop_no_message",
+      "name": "Stop (No Message)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 540]
+    },
+    {
+      "id": "n_get_firm",
+      "name": "Get Firm",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [910, 420],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/firms",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "wa_phone_number_id", "value": "=eq.{{ $json.phone_number_id }}"},
+            {"name": "select", "value": "id,name,iban,iban_holder_name,wa_access_token,wa_phone_number_id,whatsapp_phone,shipping_instructions"},
+            {"name": "limit", "value": "1"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n_firm_found",
+      "name": "Firm Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1130, 420],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c2",
+              "leftValue": "={{ Array.isArray($json) && $json.length > 0 && $json[0].id !== undefined }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n_stop_no_firm",
+      "name": "Stop (Firm Not Found)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1350, 540]
+    },
+    {
+      "id": "n_merge_context",
+      "name": "Merge Firm Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1350, 420],
+      "parameters": {
+        "jsCode": "const firmArray = $input.item.json;\nconst firm = Array.isArray(firmArray) ? firmArray[0] : firmArray;\nconst prev = $('Extract Message Data').item.json;\n\nreturn [{\n  json: {\n    ...prev,\n    firm_id: firm.id,\n    firm_name: firm.name,\n    firm_iban: firm.iban,\n    firm_iban_holder: firm.iban_holder_name,\n    firm_wa_access_token: firm.wa_access_token,\n    firm_wa_phone_number_id: firm.wa_phone_number_id,\n    firm_owner_phone: firm.whatsapp_phone,\n    firm_shipping: firm.shipping_instructions\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_upsert_customer",
+      "name": "Upsert Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1570, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/customers",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Prefer", "value": "resolution=merge-duplicates,return=representation"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"firm_id\": \"{{ $json.firm_id }}\",\n  \"whatsapp_phone\": \"{{ $json.customer_phone }}\",\n  \"display_name\": \"{{ $json.customer_name }}\",\n  \"last_interaction_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_merge_customer",
+      "name": "Merge Customer Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1790, 420],
+      "parameters": {
+        "jsCode": "const customerArray = $input.item.json;\nconst customer = Array.isArray(customerArray) ? customerArray[0] : customerArray;\nconst prev = $('Merge Firm Context').item.json;\n\nreturn [{\n  json: {\n    ...prev,\n    customer_id: customer.id\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_get_conversation",
+      "name": "Get Active Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2010, 420],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "firm_id", "value": "=eq.{{ $json.firm_id }}"},
+            {"name": "customer_id", "value": "=eq.{{ $json.customer_id }}"},
+            {"name": "state", "value": "=in.(active,awaiting_address,awaiting_payment)"},
+            {"name": "last_message_at", "value": "=gte.{{ new Date(Date.now() - 60 * 60 * 1000).toISOString() }}"},
+            {"name": "order", "value": "last_message_at.desc"},
+            {"name": "limit", "value": "1"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n_has_conversation",
+      "name": "Has Active Conversation?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2230, 420],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c3",
+              "leftValue": "={{ Array.isArray($json) && $json.length > 0 && $json[0].id !== undefined }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n_create_conversation",
+      "name": "Create New Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2450, 540],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Prefer", "value": "return=representation"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"firm_id\": \"{{ $('Merge Customer Data').item.json.firm_id }}\",\n  \"customer_id\": \"{{ $('Merge Customer Data').item.json.customer_id }}\",\n  \"state\": \"active\",\n  \"last_message_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_merge_conversation_new",
+      "name": "Merge New Conversation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2670, 540],
+      "parameters": {
+        "jsCode": "const convArray = $input.item.json;\nconst conv = Array.isArray(convArray) ? convArray[0] : convArray;\nconst prev = $('Merge Customer Data').item.json;\n\nreturn [{\n  json: {\n    ...prev,\n    conversation_id: conv.id,\n    conv_state: conv.state || 'active'\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_merge_conversation_existing",
+      "name": "Merge Existing Conversation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2450, 300],
+      "parameters": {
+        "jsCode": "const convArray = $input.item.json;\nconst conv = Array.isArray(convArray) ? convArray[0] : convArray;\nconst prev = $('Merge Customer Data').item.json;\n\nreturn [{\n  json: {\n    ...prev,\n    conversation_id: conv.id,\n    conv_state: conv.state || 'active'\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_save_inbound",
+      "name": "Save Inbound Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2890, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Prefer", "value": "return=representation"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"conversation_id\": \"{{ $json.conversation_id }}\",\n  \"direction\": \"inbound\",\n  \"sender_type\": \"customer\",\n  \"message_type\": \"{{ $json.message_type }}\",\n  \"content\": \"{{ $json.message_text }}\",\n  \"wa_message_id\": \"{{ $json.wa_message_id }}\",\n  \"media_id\": {{ $json.media_id ? '\"' + $json.media_id + '\"' : 'null' }}\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_update_conv_ts",
+      "name": "Update Conversation Timestamp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [3110, 420],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "id", "value": "=eq.{{ $('Merge Existing Conversation').item.json.conversation_id || $('Merge New Conversation').item.json.conversation_id }}"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"last_message_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_restore_context",
+      "name": "Restore Message Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3330, 420],
+      "parameters": {
+        "jsCode": "// Restore full context after HTTP nodes that lose it\n// Try each possible upstream merge node\nlet prev;\ntry { prev = $('Merge Existing Conversation').item.json; } catch(e) {}\nif (!prev || !prev.conversation_id) {\n  try { prev = $('Merge New Conversation').item.json; } catch(e) {}\n}\nreturn [{ json: { ...prev } }];"
+      }
+    },
+    {
+      "id": "n_route_state",
+      "name": "Route by Conversation State",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [3550, 420],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.conv_state }}",
+                    "rightValue": "awaiting_address",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "awaiting_address"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.conv_state }}",
+                    "rightValue": "awaiting_payment",
+                    "operator": {"type": "string", "operation": "equals"}
+                  },
+                  {
+                    "leftValue": "={{ $json.message_type }}",
+                    "rightValue": "image",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "awaiting_payment_image"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.conv_state }}",
+                    "rightValue": "awaiting_payment",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "awaiting_payment_text"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "n_call_wf002_address",
+      "name": "Trigger WF-002 (Address)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [3770, 180],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.WF_002_WEBHOOK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_call_wf003_receipt",
+      "name": "Trigger WF-003 (Receipt)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [3770, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.WF_003_WEBHOOK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_send_payment_reminder",
+      "name": "Send Payment Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [3770, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $json.firm_wa_phone_number_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.firm_wa_access_token }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Ödemenizi tamamlamak için dekontunuzu bekliyoruz. Lütfen ödeme dekontunuzun fotoğrafını gönderin.\" }\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_classify_intent",
+      "name": "Classify Intent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [3770, 540],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $vars.OPENAI_API_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"model\": \"gpt-4o-mini\",\n  \"max_tokens\": 10,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Sen bir Türk KOBİ asistan yöneticisisin. Müşteri mesajını analiz et.\\nYalnızca şu seçeneklerden birini döndür (başka hiçbir şey yazma):\\n- siparis_niyeti\\n- fiyat_sorusu\\n- stok_sorusu\\n- kargo_sorusu\\n- genel_soru\\n- selamlama\"},\n    {\"role\": \"user\", \"content\": \"{{ $json.message_text.replace(/\"/g, '\\\\\"') }}\"}\n  ]\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_extract_intent",
+      "name": "Extract Intent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3990, 540],
+      "parameters": {
+        "jsCode": "const intent = $input.item.json.choices?.[0]?.message?.content?.trim() || 'genel_soru';\nconst prev = $('Restore Message Context').item.json;\n\nreturn [{\n  json: {\n    ...prev,\n    intent\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_route_intent",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [4210, 540],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "siparis_niyeti",
+                    "operator": {"type": "string", "operation": "equals"}
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "siparis_niyeti"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      }
+    },
+    {
+      "id": "n_trigger_wf002_order",
+      "name": "Trigger WF-002 (Order Intent)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [4430, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.WF_002_WEBHOOK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_get_products",
+      "name": "Get Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [4430, 600],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/products",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "firm_id", "value": "=eq.{{ $json.firm_id }}"},
+            {"name": "is_active", "value": "=eq.true"},
+            {"name": "select", "value": "id,name,description,price,stock_quantity,unit"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n_get_faqs",
+      "name": "Get FAQs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [4430, 720],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/faqs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "firm_id", "value": "=eq.{{ $json.firm_id }}"},
+            {"name": "is_active", "value": "=eq.true"},
+            {"name": "select", "value": "question,answer"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n_get_history",
+      "name": "Get Conversation History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [4430, 840],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "conversation_id", "value": "=eq.{{ $json.conversation_id }}"},
+            {"name": "order", "value": "created_at.desc"},
+            {"name": "limit", "value": "10"},
+            {"name": "select", "value": "direction,sender_type,content,created_at"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n_build_prompt",
+      "name": "Build AI Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4650, 600],
+      "parameters": {
+        "jsCode": "const ctx = $('Extract Intent').item.json;\n\n// Gather all parallel results\nconst productsRaw = $('Get Products').item.json;\nconst faqsRaw = $('Get FAQs').item.json;\nconst historyRaw = $('Get Conversation History').item.json;\n\nconst products = Array.isArray(productsRaw) ? productsRaw : [];\nconst faqs = Array.isArray(faqsRaw) ? faqsRaw : [];\nconst history = Array.isArray(historyRaw) ? [...historyRaw].reverse() : [];\n\nconst productList = products.map(p =>\n  `- ${p.name}: ${p.price} TL (Stok: ${p.stock_quantity ?? 'Belirtilmemiş'} ${p.unit || ''}) ${p.description ? '- ' + p.description : ''}`\n).join('\\n') || 'Ürün bilgisi bulunamadı.';\n\nconst faqList = faqs.map(f =>\n  `S: ${f.question}\\nC: ${f.answer}`\n).join('\\n\\n') || 'SSS bulunamadı.';\n\nconst historyMessages = history.map(m => ({\n  role: m.direction === 'inbound' ? 'user' : 'assistant',\n  content: m.content || ''\n}));\n\nconst systemPrompt = `Sen ${ctx.firm_name} adlı firmanın WhatsApp müşteri hizmetleri asistanısın.\nMüşterilere Türkçe, samimi ve profesyonel bir dille yardım et.\n\nÜrün Listesi:\n${productList}\n\nSık Sorulan Sorular:\n${faqList}\n\nKargo Bilgisi: ${ctx.firm_shipping || 'Kargo bilgisi belirtilmemiş.'}\n\nMüşteri niyeti: ${ctx.intent}\n\nÖnemli: Sipariş almak için müşteriden adresini isteme — bu başka bir akış tarafından yönetilecek. Genel sorulara, fiyat ve stok sorularına doğrudan cevap ver.`;\n\nreturn [{\n  json: {\n    ...ctx,\n    system_prompt: systemPrompt,\n    history_messages: historyMessages\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_generate_response",
+      "name": "Generate AI Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [4870, 600],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $vars.OPENAI_API_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"model\": \"gpt-4o-mini\",\n  \"max_tokens\": 500,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{ JSON.stringify($json.system_prompt) }}},\n    ...{{ JSON.stringify($json.history_messages) }},\n    {\"role\": \"user\", \"content\": {{ JSON.stringify($json.message_text) }}}\n  ]\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_extract_response",
+      "name": "Extract AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5090, 600],
+      "parameters": {
+        "jsCode": "const aiText = $input.item.json.choices?.[0]?.message?.content?.trim() || 'Üzgünüm, şu anda cevap veremiyorum. Lütfen daha sonra tekrar deneyin.';\nconst prev = $('Build AI Prompt').item.json;\n\nreturn [{\n  json: {\n    ...prev,\n    ai_response_text: aiText\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_send_whatsapp",
+      "name": "Send WhatsApp Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [5310, 600],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $json.firm_wa_phone_number_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.firm_wa_access_token }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": {{ JSON.stringify($json.ai_response_text) }} }\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_save_outbound",
+      "name": "Save Outbound Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [5530, 600],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Prefer", "value": "return=representation"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"conversation_id\": \"{{ $('Extract AI Response').item.json.conversation_id }}\",\n  \"direction\": \"outbound\",\n  \"sender_type\": \"ai\",\n  \"message_type\": \"text\",\n  \"content\": {{ JSON.stringify($('Extract AI Response').item.json.ai_response_text) }}\n}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook GET": {
+      "main": [
+        [{"node": "Return Challenge", "type": "main", "index": 0}]
+      ]
+    },
+    "WhatsApp Webhook POST": {
+      "main": [
+        [
+          {"node": "Respond 200 OK", "type": "main", "index": 0},
+          {"node": "Extract Message Data", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Extract Message Data": {
+      "main": [
+        [{"node": "Has Valid Message?", "type": "main", "index": 0}]
+      ]
+    },
+    "Has Valid Message?": {
+      "main": [
+        [{"node": "Get Firm", "type": "main", "index": 0}],
+        [{"node": "Stop (No Message)", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Firm": {
+      "main": [
+        [{"node": "Firm Found?", "type": "main", "index": 0}]
+      ]
+    },
+    "Firm Found?": {
+      "main": [
+        [{"node": "Merge Firm Context", "type": "main", "index": 0}],
+        [{"node": "Stop (Firm Not Found)", "type": "main", "index": 0}]
+      ]
+    },
+    "Merge Firm Context": {
+      "main": [
+        [{"node": "Upsert Customer", "type": "main", "index": 0}]
+      ]
+    },
+    "Upsert Customer": {
+      "main": [
+        [{"node": "Merge Customer Data", "type": "main", "index": 0}]
+      ]
+    },
+    "Merge Customer Data": {
+      "main": [
+        [{"node": "Get Active Conversation", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Active Conversation": {
+      "main": [
+        [{"node": "Has Active Conversation?", "type": "main", "index": 0}]
+      ]
+    },
+    "Has Active Conversation?": {
+      "main": [
+        [{"node": "Merge Existing Conversation", "type": "main", "index": 0}],
+        [{"node": "Create New Conversation", "type": "main", "index": 0}]
+      ]
+    },
+    "Create New Conversation": {
+      "main": [
+        [{"node": "Merge New Conversation", "type": "main", "index": 0}]
+      ]
+    },
+    "Merge Existing Conversation": {
+      "main": [
+        [{"node": "Save Inbound Message", "type": "main", "index": 0}]
+      ]
+    },
+    "Merge New Conversation": {
+      "main": [
+        [{"node": "Save Inbound Message", "type": "main", "index": 0}]
+      ]
+    },
+    "Save Inbound Message": {
+      "main": [
+        [{"node": "Update Conversation Timestamp", "type": "main", "index": 0}]
+      ]
+    },
+    "Update Conversation Timestamp": {
+      "main": [
+        [{"node": "Restore Message Context", "type": "main", "index": 0}]
+      ]
+    },
+    "Restore Message Context": {
+      "main": [
+        [{"node": "Route by Conversation State", "type": "main", "index": 0}]
+      ]
+    },
+    "Route by Conversation State": {
+      "main": [
+        [{"node": "Trigger WF-002 (Address)", "type": "main", "index": 0}],
+        [{"node": "Trigger WF-003 (Receipt)", "type": "main", "index": 0}],
+        [{"node": "Send Payment Reminder", "type": "main", "index": 0}],
+        [{"node": "Classify Intent", "type": "main", "index": 0}]
+      ]
+    },
+    "Classify Intent": {
+      "main": [
+        [{"node": "Extract Intent", "type": "main", "index": 0}]
+      ]
+    },
+    "Extract Intent": {
+      "main": [
+        [{"node": "Route by Intent", "type": "main", "index": 0}]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [{"node": "Trigger WF-002 (Order Intent)", "type": "main", "index": 0}],
+        [
+          {"node": "Get Products", "type": "main", "index": 0},
+          {"node": "Get FAQs", "type": "main", "index": 0},
+          {"node": "Get Conversation History", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Get Products": {
+      "main": [
+        [{"node": "Build AI Prompt", "type": "main", "index": 0}]
+      ]
+    },
+    "Get FAQs": {
+      "main": [
+        [{"node": "Build AI Prompt", "type": "main", "index": 1}]
+      ]
+    },
+    "Get Conversation History": {
+      "main": [
+        [{"node": "Build AI Prompt", "type": "main", "index": 2}]
+      ]
+    },
+    "Build AI Prompt": {
+      "main": [
+        [{"node": "Generate AI Response", "type": "main", "index": 0}]
+      ]
+    },
+    "Generate AI Response": {
+      "main": [
+        [{"node": "Extract AI Response", "type": "main", "index": 0}]
+      ]
+    },
+    "Extract AI Response": {
+      "main": [
+        [{"node": "Send WhatsApp Reply", "type": "main", "index": 0}]
+      ]
+    },
+    "Send WhatsApp Reply": {
+      "main": [
+        [{"node": "Save Outbound Message", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "wf-001",
+  "meta": {
+    "instanceId": "wf-001-main-message-handler"
+  }
+}
