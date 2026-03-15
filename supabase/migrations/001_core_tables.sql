@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- firms: Multi-tenant ana tablo
 CREATE TABLE firms (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_user_id         UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  owner_user_id         UUID REFERENCES auth.users(id) ON DELETE RESTRICT,
   name                  TEXT NOT NULL,
   whatsapp_phone        TEXT NOT NULL,
   instagram_handle      TEXT,
@@ -44,7 +44,8 @@ CREATE TABLE faqs (
   answer     TEXT NOT NULL,
   category   TEXT,
   is_active  BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- customers: WhatsApp müşteri profilleri
