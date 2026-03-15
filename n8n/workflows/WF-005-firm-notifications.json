@@ -6,7 +6,10 @@
       "name": "Notification Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [250, 300],
+      "position": [
+        250,
+        300
+      ],
       "webhookId": "wf005-notify-handler",
       "parameters": {
         "httpMethod": "POST",
@@ -20,7 +23,10 @@
       "name": "Respond 200 OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [470, 180],
+      "position": [
+        470,
+        180
+      ],
       "parameters": {
         "respondWith": "text",
         "responseBody": "OK",
@@ -33,7 +39,10 @@
       "name": "Extract Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [470, 300],
+      "position": [
+        470,
+        300
+      ],
       "parameters": {
         "jsCode": "const body = $input.item.json.body;\nreturn [{ json: { ...body } }];"
       }
@@ -43,23 +52,39 @@
       "name": "Save Notification to DB",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [690, 300],
+      "position": [
+        690,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/notifications",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Content-Type", "value": "application/json"},
-            {"name": "Prefer", "value": "return=representation"}
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"firm_id\": \"{{ $json.firm_id }}\",\n  \"type\": \"{{ $json.type }}\",\n  \"title\": {{ JSON.stringify($json.title) }},\n  \"body\": {{ JSON.stringify($json.body) }},\n  \"data\": {{ JSON.stringify($json.data || {}) }},\n  \"is_read\": false\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"firm_id\": \"{{ $json.firm_id }}\",\n  \"type\": \"{{ $json.type }}\",\n  \"title\": {{ JSON.stringify($json.title) }},\n  \"body\": {{ JSON.stringify($json.body) }},\n  \"data\": {{ JSON.stringify($json.data || {}) }},\n  \"is_read\": false\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -67,23 +92,41 @@
       "name": "Get Firm",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [910, 300],
+      "position": [
+        910,
+        300
+      ],
       "parameters": {
         "method": "GET",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/firms",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"}
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {"name": "id", "value": "=eq.{{ $('Extract Payload').item.json.firm_id }}"},
-            {"name": "select", "value": "whatsapp_phone,wa_phone_number_id,wa_access_token"},
-            {"name": "limit", "value": "1"}
+            {
+              "name": "id",
+              "value": "=eq.{{ $('Extract Payload').item.json.firm_id }}"
+            },
+            {
+              "name": "select",
+              "value": "whatsapp_phone,wa_phone_number_id,wa_access_token"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            }
           ]
         },
         "options": {}
@@ -94,7 +137,10 @@
       "name": "Merge Firm Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1130, 300],
+      "position": [
+        1130,
+        300
+      ],
       "parameters": {
         "jsCode": "const firmsRaw = $input.item.json;\nconst firms = Array.isArray(firmsRaw) ? firmsRaw : [firmsRaw];\nconst firm = firms[0] || {};\nconst payload = $('Extract Payload').item.json;\nreturn [{\n  json: {\n    ...payload,\n    firm_whatsapp_phone: firm.whatsapp_phone,\n    firm_wa_phone_number_id: firm.wa_phone_number_id,\n    firm_wa_access_token: firm.wa_access_token\n  }\n}];"
       }
@@ -104,21 +150,31 @@
       "name": "Send WA to Firm Owner",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1350, 300],
+      "position": [
+        1350,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "=https://graph.facebook.com/v21.0/{{ $json.firm_wa_phone_number_id }}/messages",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "=Bearer {{ $json.firm_wa_access_token }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.firm_wa_access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.firm_whatsapp_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"🔔 {{ $json.title }}\\n\\n{{ $json.body }}\" }\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.firm_whatsapp_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"🔔 {{ $json.title }}\\n\\n{{ $json.body }}\" }\n}",
+        "specifyBody": "json"
       }
     }
   ],
@@ -126,29 +182,61 @@
     "Notification Webhook": {
       "main": [
         [
-          {"node": "Respond 200 OK", "type": "main", "index": 0},
-          {"node": "Extract Payload", "type": "main", "index": 0}
+          {
+            "node": "Respond 200 OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Payload",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Payload": {
       "main": [
-        [{"node": "Save Notification to DB", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Save Notification to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Save Notification to DB": {
       "main": [
-        [{"node": "Get Firm", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Get Firm",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Get Firm": {
       "main": [
-        [{"node": "Merge Firm Data", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Merge Firm Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Merge Firm Data": {
       "main": [
-        [{"node": "Send WA to Firm Owner", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Send WA to Firm Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },

@@ -6,7 +6,10 @@
       "name": "Order Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [250, 300],
+      "position": [
+        250,
+        300
+      ],
       "webhookId": "wf002-order-handler",
       "parameters": {
         "httpMethod": "POST",
@@ -20,7 +23,10 @@
       "name": "Respond 200 OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [470, 180],
+      "position": [
+        470,
+        180
+      ],
       "parameters": {
         "respondWith": "text",
         "responseBody": "OK",
@@ -33,7 +39,10 @@
       "name": "Route by Case",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [470, 300],
+      "position": [
+        470,
+        300
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -61,7 +70,10 @@
       "name": "Extract Payload (A)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [690, 180],
+      "position": [
+        690,
+        180
+      ],
       "parameters": {
         "jsCode": "const body = $input.item.json.body;\nreturn [{ json: { ...body } }];"
       }
@@ -71,7 +83,10 @@
       "name": "Extract Payload (B)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [690, 420],
+      "position": [
+        690,
+        420
+      ],
       "parameters": {
         "jsCode": "const body = $input.item.json.body;\nreturn [{ json: { ...body } }];"
       }
@@ -81,21 +96,31 @@
       "name": "GPT Extract Order Details",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [910, 180],
+      "position": [
+        910,
+        180
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "=Bearer {{ $env.OPENAI_API_KEY }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"model\": \"gpt-4o-mini\",\n  \"max_tokens\": 200,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Müşteri mesajından sipariş detaylarını JSON olarak çıkar: {product_name, size, quantity, notes}. Bilgi yoksa null döndür. Sadece JSON döndür, başka açıklama ekleme.\"},\n    {\"role\": \"user\", \"content\": {{ JSON.stringify($json.message_text) }}}\n  ]\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"max_tokens\": 200,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Müşteri mesajından sipariş detaylarını JSON olarak çıkar: {product_name, size, quantity, notes}. Bilgi yoksa null döndür. Sadece JSON döndür, başka açıklama ekleme.\"},\n    {\"role\": \"user\", \"content\": {{ JSON.stringify($json.message_text) }}}\n  ]\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -103,7 +128,10 @@
       "name": "Parse Order Details",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1130, 180],
+      "position": [
+        1130,
+        180
+      ],
       "parameters": {
         "jsCode": "const prev = $('Extract Payload (A)').item.json;\nlet productDetails = {};\ntry {\n  const raw = $input.item.json.choices?.[0]?.message?.content?.trim() || '{}';\n  const cleaned = raw.replace(/^```json\\s*/i, '').replace(/```\\s*$/, '').trim();\n  productDetails = JSON.parse(cleaned);\n} catch(e) {\n  productDetails = { parse_error: true };\n}\nreturn [{ json: { ...prev, product_details: productDetails } }];"
       }
@@ -113,21 +141,31 @@
       "name": "Send WA Address Request",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1350, 180],
+      "position": [
+        1350,
+        180
+      ],
       "parameters": {
         "method": "POST",
         "url": "=https://graph.facebook.com/v21.0/{{ $json.firm_wa_phone_number_id }}/messages",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "=Bearer {{ $json.firm_wa_access_token }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.firm_wa_access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Siparişinizi aldık! 🎉\\nTeslimat adresinizi paylaşır mısınız?\\n(İl, İlçe, Mahalle, Cadde/Sokak, Bina No, Daire No)\" }\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Siparişinizi aldık! 🎉\\nTeslimat adresinizi paylaşır mısınız?\\n(İl, İlçe, Mahalle, Cadde/Sokak, Bina No, Daire No)\" }\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -135,28 +173,44 @@
       "name": "PATCH Conv awaiting_address",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1570, 180],
+      "position": [
+        1570,
+        180
+      ],
       "parameters": {
         "method": "PATCH",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/conversations",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {"name": "id", "value": "=eq.{{ $('Parse Order Details').item.json.conversation_id }}"}
+            {
+              "name": "id",
+              "value": "=eq.{{ $('Parse Order Details').item.json.conversation_id }}"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"state\": \"awaiting_address\"\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"state\": \"awaiting_address\"\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -164,23 +218,39 @@
       "name": "POST Order Draft",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1790, 180],
+      "position": [
+        1790,
+        180
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/orders",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Content-Type", "value": "application/json"},
-            {"name": "Prefer", "value": "return=representation"}
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"firm_id\": \"{{ $('Parse Order Details').item.json.firm_id }}\",\n  \"customer_id\": \"{{ $('Parse Order Details').item.json.customer_id }}\",\n  \"conversation_id\": \"{{ $('Parse Order Details').item.json.conversation_id }}\",\n  \"product_details\": {{ JSON.stringify($('Parse Order Details').item.json.product_details) }},\n  \"status\": \"draft\"\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"firm_id\": \"{{ $('Parse Order Details').item.json.firm_id }}\",\n  \"customer_id\": \"{{ $('Parse Order Details').item.json.customer_id }}\",\n  \"conversation_id\": \"{{ $('Parse Order Details').item.json.conversation_id }}\",\n  \"product_details\": {{ JSON.stringify($('Parse Order Details').item.json.product_details) }},\n  \"status\": \"draft\"\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -188,20 +258,27 @@
       "name": "Notify WF-005 (A)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2010, 180],
+      "position": [
+        2010,
+        180
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $('Parse Order Details').item.json.wf005_webhook_url }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"firm_id\": \"{{ $('Parse Order Details').item.json.firm_id }}\",\n  \"type\": \"new_order\",\n  \"title\": \"🛍️ Yeni sipariş niyeti\",\n  \"body\": \"Müşteri sipariş vermek istiyor. Adres bekleniyor.\",\n  \"data\": {}\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"firm_id\": \"{{ $('Parse Order Details').item.json.firm_id }}\",\n  \"type\": \"new_order\",\n  \"title\": \"🛍️ Yeni sipariş niyeti\",\n  \"body\": \"Müşteri sipariş vermek istiyor. Adres bekleniyor.\",\n  \"data\": {}\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -209,24 +286,45 @@
       "name": "Get Draft Order",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [910, 420],
+      "position": [
+        910,
+        420
+      ],
       "parameters": {
         "method": "GET",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/orders",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"}
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {"name": "conversation_id", "value": "=eq.{{ $json.conversation_id }}"},
-            {"name": "status", "value": "=eq.draft"},
-            {"name": "order", "value": "created_at.desc"},
-            {"name": "limit", "value": "1"}
+            {
+              "name": "conversation_id",
+              "value": "=eq.{{ $json.conversation_id }}"
+            },
+            {
+              "name": "status",
+              "value": "=eq.draft"
+            },
+            {
+              "name": "order",
+              "value": "created_at.desc"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            }
           ]
         },
         "options": {}
@@ -237,7 +335,10 @@
       "name": "Merge Order B",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1130, 420],
+      "position": [
+        1130,
+        420
+      ],
       "parameters": {
         "jsCode": "const ordersRaw = $input.item.json;\nconst orders = Array.isArray(ordersRaw) ? ordersRaw : [ordersRaw];\nconst order = orders[0] || {};\nconst prev = $('Extract Payload (B)').item.json;\nreturn [{ json: { ...prev, order_id: order.id, order_number: order.order_number || order.id } }];"
       }
@@ -247,28 +348,44 @@
       "name": "PATCH Order pending_payment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1350, 420],
+      "position": [
+        1350,
+        420
+      ],
       "parameters": {
         "method": "PATCH",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/orders",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {"name": "id", "value": "=eq.{{ $json.order_id }}"}
+            {
+              "name": "id",
+              "value": "=eq.{{ $json.order_id }}"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"delivery_address\": {{ JSON.stringify($json.message_text) }},\n  \"status\": \"pending_payment\",\n  \"iban_sent_at\": \"{{ new Date().toISOString() }}\"\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"delivery_address\": {{ JSON.stringify($json.message_text) }},\n  \"status\": \"pending_payment\",\n  \"iban_sent_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -276,21 +393,31 @@
       "name": "Send WA IBAN Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1570, 420],
+      "position": [
+        1570,
+        420
+      ],
       "parameters": {
         "method": "POST",
         "url": "=https://graph.facebook.com/v21.0/{{ $('Merge Order B').item.json.firm_wa_phone_number_id }}/messages",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "=Bearer {{ $('Merge Order B').item.json.firm_wa_access_token }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Merge Order B').item.json.firm_wa_access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Merge Order B').item.json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Teşekkürler! 🙏 Ödemenizi şu bilgilere yapabilirsiniz:\\n\\n🏦 IBAN: {{ $('Merge Order B').item.json.firm_iban }}\\n👤 Ad Soyad: {{ $('Merge Order B').item.json.firm_iban_holder }}\\n📝 Açıklama: {{ $('Merge Order B').item.json.order_number }}\\n\\nÖdeme dekontunuzu bu sohbete fotoğraf olarak göndermeniz yeterli ✅\" }\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Merge Order B').item.json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Teşekkürler! 🙏 Ödemenizi şu bilgilere yapabilirsiniz:\\n\\n🏦 IBAN: {{ $('Merge Order B').item.json.firm_iban }}\\n👤 Ad Soyad: {{ $('Merge Order B').item.json.firm_iban_holder }}\\n📝 Açıklama: {{ $('Merge Order B').item.json.order_number }}\\n\\nÖdeme dekontunuzu bu sohbete fotoğraf olarak göndermeniz yeterli ✅\" }\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -298,28 +425,44 @@
       "name": "PATCH Conv awaiting_payment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1790, 420],
+      "position": [
+        1790,
+        420
+      ],
       "parameters": {
         "method": "PATCH",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/conversations",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {"name": "id", "value": "=eq.{{ $('Merge Order B').item.json.conversation_id }}"}
+            {
+              "name": "id",
+              "value": "=eq.{{ $('Merge Order B').item.json.conversation_id }}"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"state\": \"awaiting_payment\"\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"state\": \"awaiting_payment\"\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -327,20 +470,27 @@
       "name": "Notify WF-005 (B)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2010, 420],
+      "position": [
+        2010,
+        420
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $('Merge Order B').item.json.wf005_webhook_url }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"firm_id\": \"{{ $('Merge Order B').item.json.firm_id }}\",\n  \"type\": \"new_order\",\n  \"title\": \"📦 Yeni sipariş + adres alındı\",\n  \"body\": \"Sipariş No: {{ $('Merge Order B').item.json.order_number }} - IBAN gönderildi.\",\n  \"data\": {}\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"firm_id\": \"{{ $('Merge Order B').item.json.firm_id }}\",\n  \"type\": \"new_order\",\n  \"title\": \"📦 Yeni sipariş + adres alındı\",\n  \"body\": \"Sipariş No: {{ $('Merge Order B').item.json.order_number }} - IBAN gönderildi.\",\n  \"data\": {}\n}",
+        "specifyBody": "json"
       }
     }
   ],
@@ -348,75 +498,167 @@
     "Order Webhook": {
       "main": [
         [
-          {"node": "Respond 200 OK", "type": "main", "index": 0},
-          {"node": "Route by Case", "type": "main", "index": 0}
+          {
+            "node": "Respond 200 OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Route by Case",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Route by Case": {
       "main": [
-        [{"node": "Extract Payload (A)", "type": "main", "index": 0}],
-        [{"node": "Extract Payload (B)", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Extract Payload (A)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Payload (B)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract Payload (A)": {
       "main": [
-        [{"node": "GPT Extract Order Details", "type": "main", "index": 0}]
+        [
+          {
+            "node": "GPT Extract Order Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "GPT Extract Order Details": {
       "main": [
-        [{"node": "Parse Order Details", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Parse Order Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Parse Order Details": {
       "main": [
-        [{"node": "Send WA Address Request", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Send WA Address Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Send WA Address Request": {
       "main": [
-        [{"node": "PATCH Conv awaiting_address", "type": "main", "index": 0}]
+        [
+          {
+            "node": "PATCH Conv awaiting_address",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "PATCH Conv awaiting_address": {
       "main": [
-        [{"node": "POST Order Draft", "type": "main", "index": 0}]
+        [
+          {
+            "node": "POST Order Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "POST Order Draft": {
       "main": [
-        [{"node": "Notify WF-005 (A)", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Notify WF-005 (A)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract Payload (B)": {
       "main": [
-        [{"node": "Get Draft Order", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Get Draft Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Get Draft Order": {
       "main": [
-        [{"node": "Merge Order B", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Merge Order B",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Merge Order B": {
       "main": [
-        [{"node": "PATCH Order pending_payment", "type": "main", "index": 0}]
+        [
+          {
+            "node": "PATCH Order pending_payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "PATCH Order pending_payment": {
       "main": [
-        [{"node": "Send WA IBAN Message", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Send WA IBAN Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Send WA IBAN Message": {
       "main": [
-        [{"node": "PATCH Conv awaiting_payment", "type": "main", "index": 0}]
+        [
+          {
+            "node": "PATCH Conv awaiting_payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "PATCH Conv awaiting_payment": {
       "main": [
-        [{"node": "Notify WF-005 (B)", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Notify WF-005 (B)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },

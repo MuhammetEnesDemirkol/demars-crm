@@ -260,9 +260,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"firm_id\": \"{{ $json.firm_id }}\",\n  \"whatsapp_phone\": \"{{ $json.customer_phone }}\",\n  \"display_name\": \"{{ $json.customer_name }}\",\n  \"last_interaction_at\": \"{{ new Date().toISOString() }}\"\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"firm_id\": \"{{ $json.firm_id }}\",\n  \"whatsapp_phone\": \"{{ $json.customer_phone }}\",\n  \"display_name\": \"{{ $json.customer_name }}\",\n  \"last_interaction_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -402,9 +403,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"firm_id\": \"{{ $('Merge Customer Data').item.json.firm_id }}\",\n  \"customer_id\": \"{{ $('Merge Customer Data').item.json.customer_id }}\",\n  \"state\": \"active\",\n  \"last_message_at\": \"{{ new Date().toISOString() }}\"\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"firm_id\": \"{{ $('Merge Customer Data').item.json.firm_id }}\",\n  \"customer_id\": \"{{ $('Merge Customer Data').item.json.customer_id }}\",\n  \"state\": \"active\",\n  \"last_message_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -467,9 +469,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"conversation_id\": \"{{ $json.conversation_id }}\",\n  \"direction\": \"inbound\",\n  \"sender_type\": \"customer\",\n  \"message_type\": \"{{ $json.message_type }}\",\n  \"content\": \"{{ $json.message_text }}\",\n  \"wa_message_id\": \"{{ $json.wa_message_id }}\",\n  \"media_id\": {{ $json.media_id ? '\"' + $json.media_id + '\"' : 'null' }}\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"conversation_id\": \"{{ $json.conversation_id }}\",\n  \"direction\": \"inbound\",\n  \"sender_type\": \"customer\",\n  \"message_type\": \"{{ $json.message_type }}\",\n  \"content\": \"{{ $json.message_text }}\",\n  \"wa_message_id\": \"{{ $json.wa_message_id }}\",\n  \"media_id\": {{ $json.media_id ? '\"' + $json.media_id + '\"' : 'null' }}\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -511,9 +514,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"last_message_at\": \"{{ new Date().toISOString() }}\"\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"last_message_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -551,9 +555,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={{ JSON.stringify($json) }}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "specifyBody": "json"
       }
     },
     {
@@ -578,9 +583,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={{ JSON.stringify($json) }}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "specifyBody": "json"
       }
     },
     {
@@ -609,9 +615,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Ödemenizi tamamlamak için dekontunuzu bekliyoruz. Lütfen ödeme dekontunuzun fotoğrafını gönderin.\" }\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Ödemenizi tamamlamak için dekontunuzu bekliyoruz. Lütfen ödeme dekontunuzun fotoğrafını gönderin.\" }\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -640,9 +647,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"model\": \"gpt-4o-mini\",\n  \"max_tokens\": 10,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Sen bir Türk KOBİ asistan yöneticisisin. Müşteri mesajını analiz et.\\nYalnızca şu seçeneklerden birini döndür (başka hiçbir şey yazma):\\n- siparis_niyeti\\n- fiyat_sorusu\\n- stok_sorusu\\n- kargo_sorusu\\n- genel_soru\\n- selamlama\"},\n    {\"role\": \"user\", \"content\": \"{{ $json.message_text.replace(/\"/g, '\\\\\"') }}\"}\n  ]\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"max_tokens\": 10,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Sen bir Türk KOBİ asistan yöneticisisin. Müşteri mesajını analiz et.\\nYalnızca şu seçeneklerden birini döndür (başka hiçbir şey yazma):\\n- siparis_niyeti\\n- fiyat_sorusu\\n- stok_sorusu\\n- kargo_sorusu\\n- genel_soru\\n- selamlama\"},\n    {\"role\": \"user\", \"content\": \"{{ $json.message_text.replace(/\"/g, '\\\\\"') }}\"}\n  ]\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -680,9 +688,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={{ JSON.stringify($json) }}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "specifyBody": "json"
       }
     },
     {
@@ -863,9 +872,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"model\": \"gpt-4o\",\n  \"max_tokens\": 500,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{ JSON.stringify($json.system_prompt) }}},\n    ...{{ JSON.stringify($json.history_messages) }},\n    {\"role\": \"user\", \"content\": {{ JSON.stringify($json.message_text) }}}\n  ]\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o\",\n  \"max_tokens\": 500,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{ JSON.stringify($json.system_prompt) }}},\n    ...{{ JSON.stringify($json.history_messages) }},\n    {\"role\": \"user\", \"content\": {{ JSON.stringify($json.message_text) }}}\n  ]\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -907,9 +917,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": {{ JSON.stringify($json.ai_response_text) }} }\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": {{ JSON.stringify($json.ai_response_text) }} }\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -946,9 +957,10 @@
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"conversation_id\": \"{{ $('Extract AI Response').item.json.conversation_id }}\",\n  \"direction\": \"outbound\",\n  \"sender_type\": \"ai\",\n  \"message_type\": \"text\",\n  \"content\": {{ JSON.stringify($('Extract AI Response').item.json.ai_response_text) }}\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"conversation_id\": \"{{ $('Extract AI Response').item.json.conversation_id }}\",\n  \"direction\": \"outbound\",\n  \"sender_type\": \"ai\",\n  \"message_type\": \"text\",\n  \"content\": {{ JSON.stringify($('Extract AI Response').item.json.ai_response_text) }}\n}",
+        "specifyBody": "json"
       }
     },
     {

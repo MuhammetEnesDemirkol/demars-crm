@@ -6,7 +6,10 @@
       "name": "Receipt Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [250, 300],
+      "position": [
+        250,
+        300
+      ],
       "webhookId": "wf003-receipt-handler",
       "parameters": {
         "httpMethod": "POST",
@@ -20,7 +23,10 @@
       "name": "Respond 200 OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [470, 180],
+      "position": [
+        470,
+        180
+      ],
       "parameters": {
         "respondWith": "text",
         "responseBody": "OK",
@@ -33,7 +39,10 @@
       "name": "Extract Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [470, 300],
+      "position": [
+        470,
+        300
+      ],
       "parameters": {
         "jsCode": "const body = $input.item.json.body;\nreturn [{ json: { ...body } }];"
       }
@@ -43,14 +52,20 @@
       "name": "Get Media URL",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [690, 300],
+      "position": [
+        690,
+        300
+      ],
       "parameters": {
         "method": "GET",
         "url": "=https://graph.facebook.com/v21.0/{{ $json.media_id }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "=Bearer {{ $json.firm_wa_access_token }}"}
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.firm_wa_access_token }}"
+            }
           ]
         },
         "options": {}
@@ -61,7 +76,10 @@
       "name": "Merge Media URL",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [910, 300],
+      "position": [
+        910,
+        300
+      ],
       "parameters": {
         "jsCode": "const mediaUrl = $input.item.json.url;\nconst prev = $('Extract Payload').item.json;\nreturn [{ json: { ...prev, media_url: mediaUrl } }];"
       }
@@ -71,23 +89,41 @@
       "name": "Get Pending Order",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1130, 300],
+      "position": [
+        1130,
+        300
+      ],
       "parameters": {
         "method": "GET",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/orders",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"}
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {"name": "conversation_id", "value": "=eq.{{ $json.conversation_id }}"},
-            {"name": "status", "value": "=eq.pending_payment"},
-            {"name": "limit", "value": "1"}
+            {
+              "name": "conversation_id",
+              "value": "=eq.{{ $json.conversation_id }}"
+            },
+            {
+              "name": "status",
+              "value": "=eq.pending_payment"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            }
           ]
         },
         "options": {}
@@ -98,7 +134,10 @@
       "name": "Merge Order Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1350, 300],
+      "position": [
+        1350,
+        300
+      ],
       "parameters": {
         "jsCode": "const ordersRaw = $input.item.json;\nconst orders = Array.isArray(ordersRaw) ? ordersRaw : [ordersRaw];\nconst order = orders[0] || {};\nconst prev = $('Merge Media URL').item.json;\nreturn [{ json: { ...prev, order_id: order.id, order_number: order.order_number || order.id } }];"
       }
@@ -108,21 +147,31 @@
       "name": "Analyze Receipt GPT-4o",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1570, 300],
+      "position": [
+        1570,
+        300
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "=Bearer {{ $env.OPENAI_API_KEY }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"model\": \"gpt-4o\",\n  \"max_tokens\": 200,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Bu görseli analiz et. Bir ödeme dekontu mu? Eğer evet: {\\\"is_receipt\\\": true, \\\"amount\\\": null, \\\"sender\\\": null, \\\"date\\\": null}. Değilse {\\\"is_receipt\\\": false}. Sadece JSON döndür.\"},\n    {\"role\": \"user\", \"content\": [{\"type\": \"image_url\", \"image_url\": {\"url\": {{ JSON.stringify($json.media_url) }}}}]}\n  ]\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o\",\n  \"max_tokens\": 200,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Bu görseli analiz et. Bir ödeme dekontu mu? Eğer evet: {\\\"is_receipt\\\": true, \\\"amount\\\": null, \\\"sender\\\": null, \\\"date\\\": null}. Değilse {\\\"is_receipt\\\": false}. Sadece JSON döndür.\"},\n    {\"role\": \"user\", \"content\": [{\"type\": \"image_url\", \"image_url\": {\"url\": {{ JSON.stringify($json.media_url) }}}}]}\n  ]\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -130,7 +179,10 @@
       "name": "Parse Receipt Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1790, 300],
+      "position": [
+        1790,
+        300
+      ],
       "parameters": {
         "jsCode": "const prev = $('Merge Order Data').item.json;\nlet receiptData = { is_receipt: false };\ntry {\n  const raw = $input.item.json.choices?.[0]?.message?.content?.trim() || '{}';\n  const cleaned = raw.replace(/^```json\\s*/i, '').replace(/```\\s*$/, '').trim();\n  receiptData = JSON.parse(cleaned);\n} catch(e) {\n  receiptData = { is_receipt: false, parse_error: true };\n}\nreturn [{ json: { ...prev, receipt_data: receiptData, is_valid_receipt: receiptData.is_receipt === true } }];"
       }
@@ -140,7 +192,10 @@
       "name": "Is Valid Receipt?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2010, 300],
+      "position": [
+        2010,
+        300
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -168,28 +223,44 @@
       "name": "PATCH Order payment_received",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2230, 180],
+      "position": [
+        2230,
+        180
+      ],
       "parameters": {
         "method": "PATCH",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/orders",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {"name": "id", "value": "=eq.{{ $json.order_id }}"}
+            {
+              "name": "id",
+              "value": "=eq.{{ $json.order_id }}"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"status\": \"payment_received\",\n  \"receipt_verified\": true,\n  \"payment_received_at\": \"{{ new Date().toISOString() }}\"\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"status\": \"payment_received\",\n  \"receipt_verified\": true,\n  \"payment_received_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -197,28 +268,44 @@
       "name": "PATCH Conv active",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2450, 180],
+      "position": [
+        2450,
+        180
+      ],
       "parameters": {
         "method": "PATCH",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/conversations",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            {"name": "id", "value": "=eq.{{ $('Parse Receipt Result').item.json.conversation_id }}"}
+            {
+              "name": "id",
+              "value": "=eq.{{ $('Parse Receipt Result').item.json.conversation_id }}"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"state\": \"active\"\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"state\": \"active\"\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -226,21 +313,31 @@
       "name": "Send WA Payment Confirmed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2670, 180],
+      "position": [
+        2670,
+        180
+      ],
       "parameters": {
         "method": "POST",
         "url": "=https://graph.facebook.com/v21.0/{{ $('Parse Receipt Result').item.json.firm_wa_phone_number_id }}/messages",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "=Bearer {{ $('Parse Receipt Result').item.json.firm_wa_access_token }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Parse Receipt Result').item.json.firm_wa_access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Parse Receipt Result').item.json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"✅ Ödemenizi aldık! Siparişiniz hazırlanmaya başlandı.\\nSipariş No: {{ $('Parse Receipt Result').item.json.order_number }}\\n\\nHerhangi bir sorunuz için bizimle iletişime geçebilirsiniz 😊\" }\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Parse Receipt Result').item.json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"✅ Ödemenizi aldık! Siparişiniz hazırlanmaya başlandı.\\nSipariş No: {{ $('Parse Receipt Result').item.json.order_number }}\\n\\nHerhangi bir sorunuz için bizimle iletişime geçebilirsiniz 😊\" }\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -248,20 +345,27 @@
       "name": "Notify WF-005 Payment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2890, 180],
+      "position": [
+        2890,
+        180
+      ],
       "parameters": {
         "method": "POST",
         "url": "={{ $('Parse Receipt Result').item.json.wf005_webhook_url }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"firm_id\": \"{{ $('Parse Receipt Result').item.json.firm_id }}\",\n  \"type\": \"payment_received\",\n  \"title\": \"💰 Ödeme alındı!\",\n  \"body\": \"Sipariş {{ $('Parse Receipt Result').item.json.order_number }} için ödeme onaylandı.\",\n  \"data\": {}\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"firm_id\": \"{{ $('Parse Receipt Result').item.json.firm_id }}\",\n  \"type\": \"payment_received\",\n  \"title\": \"💰 Ödeme alındı!\",\n  \"body\": \"Sipariş {{ $('Parse Receipt Result').item.json.order_number }} için ödeme onaylandı.\",\n  \"data\": {}\n}",
+        "specifyBody": "json"
       }
     },
     {
@@ -269,21 +373,31 @@
       "name": "Send WA Not a Receipt",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2230, 420],
+      "position": [
+        2230,
+        420
+      ],
       "parameters": {
         "method": "POST",
         "url": "=https://graph.facebook.com/v21.0/{{ $json.firm_wa_phone_number_id }}/messages",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "=Bearer {{ $json.firm_wa_access_token }}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.firm_wa_access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "bodyContentType": "json",
-        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Üzgünüm, bu görsel bir ödeme dekontu gibi görünmüyor. 🤔\\nLütfen banka uygulamanızdan aldığınız dekont ekran görüntüsünü paylaşır mısınız?\" }\n}",
-        "options": {}
+        "options": {},
+        "contentType": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Üzgünüm, bu görsel bir ödeme dekontu gibi görünmüyor. 🤔\\nLütfen banka uygulamanızdan aldığınız dekont ekran görüntüsünü paylaşır mısınız?\" }\n}",
+        "specifyBody": "json"
       }
     }
   ],
@@ -291,65 +405,145 @@
     "Receipt Webhook": {
       "main": [
         [
-          {"node": "Respond 200 OK", "type": "main", "index": 0},
-          {"node": "Extract Payload", "type": "main", "index": 0}
+          {
+            "node": "Respond 200 OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Payload",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Payload": {
       "main": [
-        [{"node": "Get Media URL", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Get Media URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Get Media URL": {
       "main": [
-        [{"node": "Merge Media URL", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Merge Media URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Merge Media URL": {
       "main": [
-        [{"node": "Get Pending Order", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Get Pending Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Get Pending Order": {
       "main": [
-        [{"node": "Merge Order Data", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Merge Order Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Merge Order Data": {
       "main": [
-        [{"node": "Analyze Receipt GPT-4o", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Analyze Receipt GPT-4o",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Analyze Receipt GPT-4o": {
       "main": [
-        [{"node": "Parse Receipt Result", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Parse Receipt Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Parse Receipt Result": {
       "main": [
-        [{"node": "Is Valid Receipt?", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Is Valid Receipt?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Is Valid Receipt?": {
       "main": [
-        [{"node": "PATCH Order payment_received", "type": "main", "index": 0}],
-        [{"node": "Send WA Not a Receipt", "type": "main", "index": 0}]
+        [
+          {
+            "node": "PATCH Order payment_received",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send WA Not a Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "PATCH Order payment_received": {
       "main": [
-        [{"node": "PATCH Conv active", "type": "main", "index": 0}]
+        [
+          {
+            "node": "PATCH Conv active",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "PATCH Conv active": {
       "main": [
-        [{"node": "Send WA Payment Confirmed", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Send WA Payment Confirmed",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Send WA Payment Confirmed": {
       "main": [
-        [{"node": "Notify WF-005 Payment", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Notify WF-005 Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
