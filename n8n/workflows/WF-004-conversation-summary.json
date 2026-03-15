@@ -1,0 +1,296 @@
+{
+  "name": "WF-004 Conversation Summary",
+  "nodes": [
+    {
+      "id": "n_schedule",
+      "name": "Schedule Every 5 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_get_inactive_convs",
+      "name": "Get Inactive Conversations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "state", "value": "=in.(active,awaiting_address)"},
+            {"name": "last_message_at", "value": "=lt.{{ new Date(Date.now() - 3600 * 1000).toISOString() }}"},
+            {"name": "select", "value": "id,customer_id,firm_id"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n_if_any_found",
+      "name": "Any Conversations Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ Array.isArray($json) && $json.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n_stop_none",
+      "name": "Stop (None Found)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 420]
+    },
+    {
+      "id": "n_split_convs",
+      "name": "Split Conversations",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [910, 180],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_get_messages",
+      "name": "Get Conversation Messages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1130, 180],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "conversation_id", "value": "=eq.{{ $json.id }}"},
+            {"name": "order", "value": "created_at.asc"},
+            {"name": "select", "value": "sender_type,content,created_at"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n_build_summary_prompt",
+      "name": "Build Summary Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1350, 180],
+      "parameters": {
+        "jsCode": "const convItem = $('Split Conversations').item.json;\nconst messagesRaw = $input.item.json;\nconst messages = Array.isArray(messagesRaw) ? messagesRaw : [];\n\nconst conversationText = messages.map(m => {\n  const role = m.sender_type === 'customer' ? 'Müşteri' : 'Asistan';\n  return `${role}: ${m.content || '(medya)'}`;\n}).join('\\n');\n\nreturn [{\n  json: {\n    conversation_id: convItem.id,\n    customer_id: convItem.customer_id,\n    firm_id: convItem.firm_id,\n    conversation_text: conversationText || 'Konuşma içeriği bulunamadı.'\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_generate_summary",
+      "name": "Generate Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1570, 180],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $vars.OPENAI_API_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"model\": \"gpt-4o-mini\",\n  \"max_tokens\": 300,\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Bu WhatsApp konuşmasını Türkçe olarak kısaca özetle. Müşteri hakkında önemli bilgileri ve sipariş verdiyse belirt. Maksimum 3 cümle.\"},\n    {\"role\": \"user\", \"content\": {{ JSON.stringify($json.conversation_text) }}}\n  ]\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_extract_summary",
+      "name": "Extract Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1790, 180],
+      "parameters": {
+        "jsCode": "const aiSummary = $input.item.json.choices?.[0]?.message?.content?.trim() || 'Özet oluşturulamadı.';\nconst prev = $('Build Summary Prompt').item.json;\nreturn [{ json: { ...prev, ai_summary: aiSummary } }];"
+      }
+    },
+    {
+      "id": "n_patch_conversation_summarized",
+      "name": "PATCH Conv summarized",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2010, 180],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "id", "value": "=eq.{{ $json.conversation_id }}"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"state\": \"summarized\",\n  \"summary\": {{ JSON.stringify($json.ai_summary) }},\n  \"ended_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_patch_customer_summary",
+      "name": "PATCH Customer Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2230, 180],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/customers",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "id", "value": "=eq.{{ $('Extract Summary').item.json.customer_id }}"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"ai_summary\": {{ JSON.stringify($('Extract Summary').item.json.ai_summary) }},\n  \"last_interaction_at\": \"{{ new Date().toISOString() }}\"\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_loop_back",
+      "name": "Loop Back",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2450, 180]
+    }
+  ],
+  "connections": {
+    "Schedule Every 5 Min": {
+      "main": [
+        [{"node": "Get Inactive Conversations", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Inactive Conversations": {
+      "main": [
+        [{"node": "Any Conversations Found?", "type": "main", "index": 0}]
+      ]
+    },
+    "Any Conversations Found?": {
+      "main": [
+        [{"node": "Split Conversations", "type": "main", "index": 0}],
+        [{"node": "Stop (None Found)", "type": "main", "index": 0}]
+      ]
+    },
+    "Split Conversations": {
+      "main": [
+        [{"node": "Get Conversation Messages", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "Get Conversation Messages": {
+      "main": [
+        [{"node": "Build Summary Prompt", "type": "main", "index": 0}]
+      ]
+    },
+    "Build Summary Prompt": {
+      "main": [
+        [{"node": "Generate Summary", "type": "main", "index": 0}]
+      ]
+    },
+    "Generate Summary": {
+      "main": [
+        [{"node": "Extract Summary", "type": "main", "index": 0}]
+      ]
+    },
+    "Extract Summary": {
+      "main": [
+        [{"node": "PATCH Conv summarized", "type": "main", "index": 0}]
+      ]
+    },
+    "PATCH Conv summarized": {
+      "main": [
+        [{"node": "PATCH Customer Summary", "type": "main", "index": 0}]
+      ]
+    },
+    "PATCH Customer Summary": {
+      "main": [
+        [{"node": "Loop Back", "type": "main", "index": 0}]
+      ]
+    },
+    "Loop Back": {
+      "main": [
+        [{"node": "Split Conversations", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "wf-004",
+  "meta": {
+    "instanceId": "wf-004-conversation-summary"
+  }
+}

@@ -1,0 +1,295 @@
+{
+  "name": "WF-006 Payment Reminder",
+  "nodes": [
+    {
+      "id": "n_schedule",
+      "name": "Schedule Every 15 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/15 * * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n_get_overdue_orders",
+      "name": "Get Overdue Orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/orders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "status", "value": "=eq.pending_payment"},
+            {"name": "reminder_sent", "value": "=eq.false"},
+            {"name": "iban_sent_at", "value": "=lt.{{ new Date(Date.now() - 7200 * 1000).toISOString() }}"},
+            {"name": "select", "value": "id,order_number,customer_id,conversation_id,firm_id"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n_if_any_found",
+      "name": "Any Overdue Orders?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ Array.isArray($json) && $json.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "n_stop_none",
+      "name": "Stop (No Overdue Orders)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [910, 420]
+    },
+    {
+      "id": "n_split_orders",
+      "name": "Split Orders",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [910, 180],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "n_get_customer",
+      "name": "Get Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1130, 180],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/customers",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "id", "value": "=eq.{{ $json.customer_id }}"},
+            {"name": "select", "value": "whatsapp_phone"},
+            {"name": "limit", "value": "1"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n_merge_customer",
+      "name": "Merge Customer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1350, 180],
+      "parameters": {
+        "jsCode": "const customersRaw = $input.item.json;\nconst customers = Array.isArray(customersRaw) ? customersRaw : [customersRaw];\nconst customer = customers[0] || {};\nconst order = $('Split Orders').item.json;\nreturn [{\n  json: {\n    order_id: order.id,\n    order_number: order.order_number || order.id,\n    customer_id: order.customer_id,\n    conversation_id: order.conversation_id,\n    firm_id: order.firm_id,\n    customer_phone: customer.whatsapp_phone\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_get_firm",
+      "name": "Get Firm",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1570, 180],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/firms",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "id", "value": "=eq.{{ $json.firm_id }}"},
+            {"name": "select", "value": "iban,iban_holder_name,wa_phone_number_id,wa_access_token"},
+            {"name": "limit", "value": "1"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n_merge_firm",
+      "name": "Merge Firm",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1790, 180],
+      "parameters": {
+        "jsCode": "const firmsRaw = $input.item.json;\nconst firms = Array.isArray(firmsRaw) ? firmsRaw : [firmsRaw];\nconst firm = firms[0] || {};\nconst prev = $('Merge Customer').item.json;\nreturn [{\n  json: {\n    ...prev,\n    firm_iban: firm.iban,\n    firm_iban_holder: firm.iban_holder_name,\n    firm_wa_phone_number_id: firm.wa_phone_number_id,\n    firm_wa_access_token: firm.wa_access_token\n  }\n}];"
+      }
+    },
+    {
+      "id": "n_send_reminder_wa",
+      "name": "Send Reminder WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2010, 180],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $json.firm_wa_phone_number_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{ $json.firm_wa_access_token }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.customer_phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"Merhaba! {{ $json.order_number }} numaralı siparişiniz için ödeme bildirimini henüz almadık. 📋\\n\\n🏦 IBAN: {{ $json.firm_iban }}\\n👤 Ad Soyad: {{ $json.firm_iban_holder }}\\n\\nÖdeme yaptıysanız dekontunuzu bu sohbete gönderebilirsiniz. 🙏\" }\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_patch_order_reminder_sent",
+      "name": "PATCH Order reminder_sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2230, 180],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $vars.SUPABASE_URL }}/rest/v1/orders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "id", "value": "=eq.{{ $('Merge Firm').item.json.order_id }}"}
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "body": "={\n  \"reminder_sent\": true\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n_loop_back",
+      "name": "Loop Back",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2450, 180]
+    }
+  ],
+  "connections": {
+    "Schedule Every 15 Min": {
+      "main": [
+        [{"node": "Get Overdue Orders", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Overdue Orders": {
+      "main": [
+        [{"node": "Any Overdue Orders?", "type": "main", "index": 0}]
+      ]
+    },
+    "Any Overdue Orders?": {
+      "main": [
+        [{"node": "Split Orders", "type": "main", "index": 0}],
+        [{"node": "Stop (No Overdue Orders)", "type": "main", "index": 0}]
+      ]
+    },
+    "Split Orders": {
+      "main": [
+        [{"node": "Get Customer", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "Get Customer": {
+      "main": [
+        [{"node": "Merge Customer", "type": "main", "index": 0}]
+      ]
+    },
+    "Merge Customer": {
+      "main": [
+        [{"node": "Get Firm", "type": "main", "index": 0}]
+      ]
+    },
+    "Get Firm": {
+      "main": [
+        [{"node": "Merge Firm", "type": "main", "index": 0}]
+      ]
+    },
+    "Merge Firm": {
+      "main": [
+        [{"node": "Send Reminder WhatsApp", "type": "main", "index": 0}]
+      ]
+    },
+    "Send Reminder WhatsApp": {
+      "main": [
+        [{"node": "PATCH Order reminder_sent", "type": "main", "index": 0}]
+      ]
+    },
+    "PATCH Order reminder_sent": {
+      "main": [
+        [{"node": "Loop Back", "type": "main", "index": 0}]
+      ]
+    },
+    "Loop Back": {
+      "main": [
+        [{"node": "Split Orders", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "wf-006",
+  "meta": {
+    "instanceId": "wf-006-payment-reminder"
+  }
+}
