@@ -77,7 +77,10 @@ BEGIN
       UPDATE customers SET total_orders = GREATEST(total_orders - 1, 0) WHERE id = NEW.customer_id;
     END IF;
   ELSIF TG_OP = 'DELETE' AND OLD.status != 'draft' AND OLD.status != 'cancelled' THEN
-    UPDATE customers SET total_orders = GREATEST(total_orders - 1, 0) WHERE id = NEW.customer_id;
+    UPDATE customers SET total_orders = GREATEST(total_orders - 1, 0) WHERE id = OLD.customer_id;
+  END IF;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
   END IF;
   RETURN NEW;
 END;
