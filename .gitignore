@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+dashboard/.next/
+dashboard/out/
+dashboard/build/
+
+# Environment variables (NEVER commit these)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Claude Code local settings (may contain sensitive data)
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel/project.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+dashboard/next-env.d.ts

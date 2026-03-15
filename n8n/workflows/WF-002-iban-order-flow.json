@@ -19,14 +19,13 @@
       "id": "n_respond_200",
       "name": "Respond 200 OK",
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
+      "typeVersion": 1.1,
       "position": [470, 180],
       "parameters": {
         "respondWith": "text",
         "responseBody": "OK",
-        "options": {
-          "responseCode": 200
-        }
+        "responseCode": 200,
+        "options": {}
       }
     },
     {
