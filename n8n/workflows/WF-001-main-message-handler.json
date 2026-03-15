@@ -185,7 +185,7 @@
           "conditions": [
             {
               "id": "c2",
-              "leftValue": "={{ Array.isArray($json) && $json.length > 0 && $json[0].id !== undefined }}",
+              "leftValue": "={{ $json.id !== undefined && $json.id !== null }}",
               "operator": {
                 "type": "boolean",
                 "operation": "true"
@@ -333,7 +333,8 @@
           ]
         },
         "options": {}
-      }
+      },
+      "alwaysOutputData": true
     },
     {
       "id": "n_has_conversation",
@@ -349,7 +350,7 @@
           "conditions": [
             {
               "id": "c3",
-              "leftValue": "={{ Array.isArray($json) && $json.length > 0 && $json[0].id !== undefined }}",
+              "leftValue": "={{ $json.id !== undefined && $json.id !== null }}",
               "operator": {
                 "type": "boolean",
                 "operation": "true"
