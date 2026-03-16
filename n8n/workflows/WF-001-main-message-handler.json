@@ -1354,7 +1354,7 @@
       "main": [
         [
           {
-            "node": "Build AI Prompt",
+            "node": "Get FAQs",
             "type": "main",
             "index": 0
           }
@@ -1365,9 +1365,9 @@
       "main": [
         [
           {
-            "node": "Build AI Prompt",
+            "node": "Get Conversation History",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
@@ -1378,7 +1378,7 @@
           {
             "node": "Build AI Prompt",
             "type": "main",
-            "index": 2
+            "index": 0
           }
         ]
       ]
@@ -1493,16 +1493,6 @@
         [
           {
             "node": "Get Products",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Get FAQs",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Get Conversation History",
             "type": "main",
             "index": 0
           }
