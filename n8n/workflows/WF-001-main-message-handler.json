@@ -263,7 +263,16 @@
         "options": {},
         "contentType": "json",
         "jsonBody": "={\n  \"firm_id\": \"{{ $json.firm_id }}\",\n  \"whatsapp_phone\": \"{{ $json.customer_phone }}\",\n  \"display_name\": \"{{ $json.customer_name }}\",\n  \"last_interaction_at\": \"{{ new Date().toISOString() }}\"\n}",
-        "specifyBody": "json"
+        "specifyBody": "json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "on_conflict",
+              "value": "firm_id,whatsapp_phone"
+            }
+          ]
+        }
       }
     },
     {
