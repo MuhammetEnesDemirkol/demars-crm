@@ -741,7 +741,7 @@
             },
             {
               "name": "select",
-              "value": "id,name,description,price,stock_quantity,unit"
+              "value": "id,name,description,price,stock_status,sizes,category"
             }
           ]
         },
@@ -852,7 +852,7 @@
         600
       ],
       "parameters": {
-        "jsCode": "const ctx = $('Extract Intent').item.json;\n\n// Gather all parallel results\nconst productsRaw = $('Get Products').item.json;\nconst faqsRaw = $('Get FAQs').item.json;\nconst historyRaw = $('Get Conversation History').item.json;\n\nconst products = Array.isArray(productsRaw) ? productsRaw : [];\nconst faqs = Array.isArray(faqsRaw) ? faqsRaw : [];\nconst history = Array.isArray(historyRaw) ? [...historyRaw].reverse() : [];\n\nconst productList = products.map(p =>\n  `- ${p.name}: ${p.price} TL (Stok: ${p.stock_quantity ?? 'Belirtilmemiş'} ${p.unit || ''}) ${p.description ? '- ' + p.description : ''}`\n).join('\\n') || 'Ürün bilgisi bulunamadı.';\n\nconst faqList = faqs.map(f =>\n  `S: ${f.question}\\nC: ${f.answer}`\n).join('\\n\\n') || 'SSS bulunamadı.';\n\nconst historyMessages = history.map(m => ({\n  role: m.direction === 'inbound' ? 'user' : 'assistant',\n  content: m.content || ''\n}));\n\nconst systemPrompt = `Sen ${ctx.firm_name} adlı firmanın WhatsApp müşteri hizmetleri asistanısın.\nMüşterilere Türkçe, samimi ve profesyonel bir dille yardım et.\n\nÜrün Listesi:\n${productList}\n\nSık Sorulan Sorular:\n${faqList}\n\nKargo Bilgisi: ${ctx.firm_shipping || 'Kargo bilgisi belirtilmemiş.'}\n\nMüşteri niyeti: ${ctx.intent}\n\nÖnemli: Sipariş almak için müşteriden adresini isteme — bu başka bir akış tarafından yönetilecek. Genel sorulara, fiyat ve stok sorularına doğrudan cevap ver.`;\n\nreturn [{\n  json: {\n    ...ctx,\n    system_prompt: systemPrompt,\n    history_messages: historyMessages\n  }\n}];"
+        "jsCode": "const ctx = $('Extract Intent').item.json;\n\n// Gather all parallel results\nconst productsRaw = $('Get Products').item.json;\nconst faqsRaw = $('Get FAQs').item.json;\nconst historyRaw = $('Get Conversation History').item.json;\n\nconst products = Array.isArray(productsRaw) ? productsRaw : [];\nconst faqs = Array.isArray(faqsRaw) ? faqsRaw : [];\nconst history = Array.isArray(historyRaw) ? [...historyRaw].reverse() : [];\n\nconst productList = products.map(p =>\n  `- ${p.name}: ${p.price} TL (Stok: ${p.stock_status || 'available'} ) ${p.description ? '- ' + p.description : ''}`\n).join('\\n') || 'Ürün bilgisi bulunamadı.';\n\nconst faqList = faqs.map(f =>\n  `S: ${f.question}\\nC: ${f.answer}`\n).join('\\n\\n') || 'SSS bulunamadı.';\n\nconst historyMessages = history.map(m => ({\n  role: m.direction === 'inbound' ? 'user' : 'assistant',\n  content: m.content || ''\n}));\n\nconst systemPrompt = `Sen ${ctx.firm_name} adlı firmanın WhatsApp müşteri hizmetleri asistanısın.\nMüşterilere Türkçe, samimi ve profesyonel bir dille yardım et.\n\nÜrün Listesi:\n${productList}\n\nSık Sorulan Sorular:\n${faqList}\n\nKargo Bilgisi: ${ctx.firm_shipping || 'Kargo bilgisi belirtilmemiş.'}\n\nMüşteri niyeti: ${ctx.intent}\n\nÖnemli: Sipariş almak için müşteriden adresini isteme — bu başka bir akış tarafından yönetilecek. Genel sorulara, fiyat ve stok sorularına doğrudan cevap ver.`;\n\nreturn [{\n  json: {\n    ...ctx,\n    system_prompt: systemPrompt,\n    history_messages: historyMessages\n  }\n}];"
       }
     },
     {
